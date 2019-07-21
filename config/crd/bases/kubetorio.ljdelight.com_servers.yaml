@@ -1,0 +1,53 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  name: servers.kubetorio.ljdelight.com
+spec:
+  group: kubetorio.ljdelight.com
+  names:
+    kind: Server
+    plural: servers
+  scope: ""
+  validation:
+    openAPIV3Schema:
+      description: Server is the Schema for the servers API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ServerSpec defines the desired state of Server
+          properties:
+            port:
+              description: Port used to listen for incoming udp data
+              type: string
+            rconPort:
+              description: The RCON management port
+              type: string
+          type: object
+        status:
+          description: ServerStatus defines the observed state of Server
+          type: object
+      type: object
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -1,0 +1,7 @@
+version: "2"
+domain: ljdelight.com
+repo: github.com/ljdelight/kubetorio
+resources:
+- group: kubetorio
+  version: v1beta1
+  kind: Server

@@ -1,0 +1,59 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: factorio-deployment
+  labels:
+    app: factorio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: factorio
+  template:
+    metadata:
+      labels:
+        app: factorio
+    spec:
+      containers:
+      - name: factorio
+        image: factoriotools/factorio:0.17.58
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1000m"
+          limits:
+            memory: "2Gi"
+            cpu: "4000m"
+        env:
+          - name: "PORT"
+            value: "31001"
+          - name: "RCON_PORT"
+            value: "27015"
+        command: ["/bin/sh", "-cxe"]
+        args:
+          - |
+            jq '.visibility.public = "false"' /opt/factorio/data/server-settings.example.json > /opt/factorio/data/server-settings.json.tmp;
+            mv /opt/factorio/data/server-settings.json.tmp /opt/factorio/data/server-settings.example.json;
+            cat /opt/factorio/data/server-settings.example.json;
+            exec /docker-entrypoint.sh;
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: factorio
+  labels:
+    app: factorio
+spec:
+  type: NodePort
+  ports:
+#  - port: 27015
+#    nodePort: 31000
+#    protocol: "TCP"
+#    name: tcp
+  - port: 31001
+    nodePort: 31001
+    protocol: "UDP"
+    name: udp
+  selector:
+    app: factorio
