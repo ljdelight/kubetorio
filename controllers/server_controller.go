@@ -24,10 +24,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	//kbatch "k8s.io/api/batch/v1"
 	kubetorio "github.com/ljdelight/kubetorio/api/v1beta1"
 	kapps "k8s.io/api/apps/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+var (
+	jobOwnerKey = ".metadata.controller"
+	apiGVStr    = kubetorio.GroupVersion.String()
 )
 
 // ServerReconciler reconciles a Server object
@@ -49,6 +53,14 @@ func (r *ServerReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		log.Error(err, "unable to fetch kubetorioServer")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	// NOTE: This listing works because `SetupWithManager` specifies that `Deployments` are generated from this controller and should be monitored.
+	var childDeployments kapps.DeploymentList
+	if err := r.List(ctx, &childDeployments, client.InNamespace(req.Namespace), client.MatchingField(jobOwnerKey, req.Name)); err != nil {
+		log.Error(err, "unable to list child Jobs", "req", req)
+		return ctrl.Result{}, err
+	}
+
 	deployment, e := r.makeDeployment(&kubetorioServer)
 	if e != nil {
 		log.Error(e, "unable to construct deployment")
@@ -108,7 +120,29 @@ func (r *ServerReconciler) makeDeployment(server *kubetorio.Server) (*kapps.Depl
 }
 
 func (r *ServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	if err := mgr.GetFieldIndexer().IndexField(&kapps.Deployment{}, jobOwnerKey, func(rawObj runtime.Object) []string {
+		// grab the job object, extract the owner...
+		deployment := rawObj.(*kapps.Deployment)
+		owner := metav1.GetControllerOf(deployment)
+		if owner == nil {
+			return nil
+		}
+		// ...make sure it's a CronJob...
+		if owner.APIVersion != apiGVStr || owner.Kind != "Server" {
+			r.Log.Info("Indexer found owner for this controller but it was not a server", "ownerController", owner)
+			return nil
+		}
+
+		r.Log.Info("Found controller owner", "owner", owner)
+		return []string{owner.Name}
+	}); err != nil {
+		r.Log.Error(err, "Failed to setup indexer")
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&kubetorio.Server{}).
+		Owns(&kapps.Deployment{}).
 		Complete(r)
 }

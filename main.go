@@ -17,6 +17,7 @@ package main
 
 import (
 	"flag"
+	kapps "k8s.io/api/apps/v1"
 	"os"
 
 	kubetoriov1beta1 "github.com/ljdelight/kubetorio/api/v1beta1"
@@ -38,6 +39,10 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
 	_ = kubetoriov1beta1.AddToScheme(scheme)
+
+	// Apply the scheme to kapps since we're creating 'deployments'
+	_ = kapps.AddToScheme(scheme)
+
 	// +kubebuilder:scaffold:scheme
 }
 
