@@ -14,15 +14,15 @@ endif
 all: manager manifests
 
 # Run tests
-test: generate fmt vet manifests
-	go test ./api/... ./controllers/... -coverprofile cover.out
+test: generate lint
+	go test ./api/... ./controllers/... -coverprofile cover.txt
 
 # Build manager binary
-manager: generate fmt vet
+manager: generateGo lint
 	go build -o bin/manager main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
+run: generate lint
 	go run ./main.go
 
 # Install CRDs into a cluster
@@ -34,21 +34,25 @@ deploy: manifests
 	kubectl apply -f config/crd/bases
 	kustomize build config/default | kubectl apply -f -
 
-# Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+# Run golangci-lint against code
+lint: $(GOPATH)/bin/golangci-lint
+	golangci-lint run -E gofmt -E gosec ./...
 
 # Run go fmt against code
 fmt:
 	go fmt ./...
 
-# Run go vet against code
-vet:
-	go vet ./...
+# Generate the go file and manifests
+generate: generateGo manifests
 
 # Generate code
-generate: controller-gen
+generateGo: controller-gen
 	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths=./api/...
+
+# Generate manifests e.g. CRD, RBAC etc.
+manifests: controller-gen
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 # Build the docker image
 docker-build: test
@@ -60,8 +64,7 @@ docker-build: test
 docker-push:
 	docker push ${IMG}
 
-# find or download controller-gen
-# download controller-gen if necessary
+# Find or download controller-gen
 controller-gen:
 ifeq (, $(shell which controller-gen))
 	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.2.0-beta.4
@@ -69,3 +72,6 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+$(GOPATH)/bin/golangci-lint:
+	GO111MODULE=on go get github.com/golangci/golangci-lint/cmd/golangci-lint@v1.17.1

@@ -69,9 +69,9 @@ func int32Ptr(i int32) *int32 { return &i }
 func (r *ServerReconciler) makeDeployment(server *kubetorio.Server) (*kapps.Deployment, error) {
 	deployment := &kapps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "factorio",
+			Name:      "factorio",
 			Namespace: "default",
-			Labels: map[string]string{"app": "factorio"},
+			Labels:    map[string]string{"app": "factorio"},
 		},
 		Spec: kapps.DeploymentSpec{
 			Replicas: int32Ptr(1),
